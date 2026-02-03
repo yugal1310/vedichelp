@@ -2,48 +2,73 @@
 
 type MonthOutlook = { month: string; score: number; note: string };
 
+// ---------- PLACE → LAT/LON ----------
 async function geocodePlace(place: string): Promise<{ lat: number; lon: number }> {
   const url =
     "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" +
     encodeURIComponent(place);
 
   const res = await fetch(url, {
-    headers: {
-      // Nominatim requests a user-agent. Keep it simple.
-      "User-Agent": "vedichelp/1.0",
-    },
+    headers: { "User-Agent": "vedichelp/1.0" },
   });
 
-  if (!res.ok) throw new Error("Geocoding failed. Try a more specific place.");
+  if (!res.ok) throw new Error("Geocoding failed");
 
   const data = await res.json();
   if (!Array.isArray(data) || data.length === 0) {
-    throw new Error("Place not found. Try: City, State, Country");
+    throw new Error("Place not found");
   }
 
-  return { lat: Number(data[0].lat), lon: Number(data[0].lon) };
+  return {
+    lat: Number(data[0].lat),
+    lon: Number(data[0].lon),
+  };
 }
 
+// ---------- LAT/LON → TIMEZONE ----------
+async function getTimezone(lat: number, lon: number) {
+  const key = process.env.TIMEZONE_API_KEY;
+  if (!key) {
+    throw new Error("TIMEZONE_API_KEY missing");
+  }
+
+  const url = `https://api.timezonedb.com/v2.1/get-time-zone?key=${key}&format=json&by=position&lat=${lat}&lng=${lon}`;
+  const res = await fetch(url);
+
+  if (!res.ok) throw new Error("Timezone lookup failed");
+
+  const data = await res.json();
+  if (data.status !== "OK") {
+    throw new Error("Invalid timezone response");
+  }
+
+  return {
+    tz: data.zoneName as string,
+    gmtOffset: Number(data.gmtOffset), // seconds
+  };
+}
+
+// ---------- MONTH PLACEHOLDER ----------
 function buildMonths(): MonthOutlook[] {
   const months = [
-    "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"
+    "Jan","Feb","Mar","Apr","May","Jun",
+    "Jul","Aug","Sep","Oct","Nov","Dec",
   ];
 
-  // MVP baseline: always return 12 months. We’ll replace scores/notes with real logic later.
   return months.map((m) => ({
     month: m,
     score: 5,
-    note: "Baseline outlook (MVP).",
+    note: "Baseline outlook (MVP)",
   }));
 }
 
+// ---------- API ----------
 export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    // We accept these inputs, but we do NOT return them back.
-    const dob = String(body?.dob ?? "").trim(); // YYYY-MM-DD
-    const tob = String(body?.tob ?? "").trim(); // HH:MM
+    const dob = String(body?.dob ?? "").trim();   // YYYY-MM-DD
+    const tob = String(body?.tob ?? "").trim();   // HH:MM
     const place = String(body?.place ?? "").trim();
 
     if (!dob || !tob || !place) {
@@ -53,31 +78,38 @@ export async function POST(req: Request) {
       );
     }
 
+    // 1️⃣ Place → lat/lon
     const { lat, lon } = await geocodePlace(place);
 
-    // Placeholder “engine” output for now. Next steps will compute a real chart + rules.
-    const response = {
-      engineVersion: "0.2.0",
-      summary:
-        "This is a baseline reading while we build the full astrology engine (chart + rules).",
-      themes: ["Consistency pays off", "Clarity improves decisions", "Steady progress"],
-      personality: ["Analytical", "Goal-oriented", "Prefers structure"],
+    // 2️⃣ lat/lon → timezone
+    const { tz, gmtOffset } = await getTimezone(lat, lon);
+
+    // 3️⃣ Local time → UTC
+    const localIso = `${dob}T${tob}:00`;
+    const localMillis = Date.parse(localIso);
+    const utcMillis = localMillis - gmtOffset * 1000;
+    const utcBirthDateTime = new Date(utcMillis).toISOString();
+
+    return Response.json({
+      engineVersion: "0.4.0",
+      summary: "Birth time normalized to UTC successfully.",
+      themes: ["Infrastructure ready"],
+      personality: [],
       monthByMonth: buildMonths(),
       confidence: "low",
       meta: {
-        // Safe metadata: no raw place string, no dob/tob echoed back
         location: { lat, lon },
+        tz,
+        utcBirthDateTime,
       },
       trace: [
-        { ruleId: "MVP-BASELINE", source: "engine placeholder" },
         { ruleId: "GEO-OK", source: "nominatim" },
+        { ruleId: "TZ-OK", source: "timezonedb" },
       ],
-    };
-
-    return Response.json(response);
+    });
   } catch (e: any) {
     return Response.json(
-      { error: e?.message || "Server error" },
+      { error: e.message || "Server error" },
       { status: 500 }
     );
   }
