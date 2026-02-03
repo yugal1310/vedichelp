@@ -1,4 +1,6 @@
 "use client";
+export const dynamic = "force-dynamic";
+
 
 import { useState } from "react";
 
@@ -9,6 +11,7 @@ type ApiResponse = {
   personality?: string[];
   monthByMonth?: { month: string; score: number; note: string }[];
   confidence?: string;
+  meta?: { location?: { lat: number; lon: number } };
   trace?: { ruleId: string; source?: string }[];
 };
 
@@ -32,6 +35,8 @@ export default function Home() {
       const res = await fetch("/api/predict", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+
+        // Name is optional; we send it but we don’t display it.
         body: JSON.stringify({ name, dob, tob, place }),
       });
 
@@ -121,11 +126,7 @@ export default function Home() {
         </button>
       </form>
 
-      {error && (
-        <p style={{ marginTop: 16, color: "crimson" }}>
-          Error: {error}
-        </p>
-      )}
+      {error && <p style={{ marginTop: 16, color: "crimson" }}>Error: {error}</p>}
 
       {response && (
         <section
@@ -188,6 +189,13 @@ export default function Home() {
             </table>
           </div>
 
+          {response.meta?.location && (
+            <p style={{ marginTop: 12, opacity: 0.75 }}>
+              Location resolved (lat/lon): {response.meta.location.lat.toFixed(4)},{" "}
+              {response.meta.location.lon.toFixed(4)}
+            </p>
+          )}
+
           <details style={{ marginTop: 14 }}>
             <summary style={{ cursor: "pointer", fontWeight: 800 }}>Why (Trace)</summary>
             <ul style={{ marginTop: 8 }}>
@@ -201,9 +209,7 @@ export default function Home() {
           </details>
 
           {response.engineVersion && (
-            <p style={{ marginTop: 12, opacity: 0.7 }}>
-              Engine: {response.engineVersion}
-            </p>
+            <p style={{ marginTop: 12, opacity: 0.7 }}>Engine: {response.engineVersion}</p>
           )}
         </section>
       )}
