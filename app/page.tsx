@@ -1,6 +1,6 @@
 "use client";
-export const dynamic = "force-dynamic";
 
+export const dynamic = "force-dynamic";
 
 import { useState } from "react";
 
@@ -11,7 +11,12 @@ type ApiResponse = {
   personality?: string[];
   monthByMonth?: { month: string; score: number; note: string }[];
   confidence?: string;
-  meta?: { location?: { lat: number; lon: number } };
+  meta?: {
+    location?: { lat: number; lon: number };
+    tz?: string;
+    utcBirthDateTime?: string;
+  };
+  chart?: any;
   trace?: { ruleId: string; source?: string }[];
 };
 
@@ -35,8 +40,6 @@ export default function Home() {
       const res = await fetch("/api/predict", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-
-        // Name is optional; we send it but we don’t display it.
         body: JSON.stringify({ name, dob, tob, place }),
       });
 
@@ -153,12 +156,10 @@ export default function Home() {
           </div>
 
           <div style={{ marginTop: 14 }}>
-            <h3 style={{ fontWeight: 800 }}>Personality</h3>
-            <ul style={{ marginTop: 6 }}>
-              {(response.personality || []).map((p) => (
-                <li key={p}>{p}</li>
-              ))}
-            </ul>
+            <h3 style={{ fontWeight: 800 }}>Chart (MVP)</h3>
+            <pre style={{ marginTop: 8, opacity: 0.9, overflowX: "auto" }}>
+              {JSON.stringify(response.chart, null, 2)}
+            </pre>
           </div>
 
           <div style={{ marginTop: 14 }}>
