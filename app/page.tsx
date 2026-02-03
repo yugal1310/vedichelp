@@ -1,116 +1,50 @@
-"use client";
+{response && (
+  <div style={{ marginTop: 24 }}>
+    <h2 style={{ fontSize: 20, fontWeight: 700 }}>Report</h2>
 
-import { useState } from "react";
+    <p style={{ marginTop: 8 }}>{response.summary}</p>
 
-export default function Home() {
-  const [name, setName] = useState("");
-  const [dob, setDob] = useState(""); // YYYY-MM-DD
-  const [tob, setTob] = useState(""); // HH:MM
-  const [place, setPlace] = useState("");
+    <h3 style={{ marginTop: 16, fontWeight: 700 }}>Themes</h3>
+    <ul>
+      {(response.themes || []).map((t: string) => (
+        <li key={t}>{t}</li>
+      ))}
+    </ul>
 
-  const [loading, setLoading] = useState(false);
-  const [response, setResponse] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
+    <h3 style={{ marginTop: 16, fontWeight: 700 }}>Personality</h3>
+    <ul>
+      {(response.personality || []).map((p: string) => (
+        <li key={p}>{p}</li>
+      ))}
+    </ul>
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setResponse(null);
+    <h3 style={{ marginTop: 16, fontWeight: 700 }}>Month-by-month</h3>
+    <table style={{ width: "100%", marginTop: 8, borderCollapse: "collapse" }}>
+      <thead>
+        <tr>
+          <th style={{ textAlign: "left", borderBottom: "1px solid #ccc", padding: 8 }}>Month</th>
+          <th style={{ textAlign: "left", borderBottom: "1px solid #ccc", padding: 8 }}>Score</th>
+          <th style={{ textAlign: "left", borderBottom: "1px solid #ccc", padding: 8 }}>Note</th>
+        </tr>
+      </thead>
+      <tbody>
+        {(response.monthByMonth || []).map((m: any) => (
+          <tr key={m.month}>
+            <td style={{ borderBottom: "1px solid #eee", padding: 8 }}>{m.month}</td>
+            <td style={{ borderBottom: "1px solid #eee", padding: 8 }}>{m.score}</td>
+            <td style={{ borderBottom: "1px solid #eee", padding: 8 }}>{m.note}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
 
-    try {
-      const res = await fetch("/api/predict", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, dob, tob, place }),
-      });
-
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || "Request failed");
-      setResponse(json);
-    } catch (err: any) {
-      setError(err?.message || "Something went wrong");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <main style={{ maxWidth: 760, margin: "40px auto", padding: 16 }}>
-      <h1 style={{ fontSize: 28, fontWeight: 700 }}>Astrology MVP</h1>
-      <p style={{ marginTop: 8, opacity: 0.8 }}>
-        Enter birth details to generate a basic reading.
-      </p>
-
-      <form onSubmit={handleSubmit} style={{ marginTop: 20, display: "grid", gap: 12 }}>
-        <label>
-          Name (optional)
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            style={{ width: "100%", padding: 10, marginTop: 6 }}
-            placeholder="Yugal Shah"
-          />
-        </label>
-
-        <label>
-          Date of Birth
-          <input
-            type="date"
-            value={dob}
-            onChange={(e) => setDob(e.target.value)}
-            required
-            style={{ width: "100%", padding: 10, marginTop: 6 }}
-          />
-        </label>
-
-        <label>
-          Time of Birth
-          <input
-            type="time"
-            value={tob}
-            onChange={(e) => setTob(e.target.value)}
-            required
-            style={{ width: "100%", padding: 10, marginTop: 6 }}
-          />
-        </label>
-
-        <label>
-          Place of Birth
-          <input
-            value={place}
-            onChange={(e) => setPlace(e.target.value)}
-            required
-            style={{ width: "100%", padding: 10, marginTop: 6 }}
-            placeholder="Petlad, Anand, India"
-          />
-        </label>
-
-        <button
-          type="submit"
-          disabled={loading}
-          style={{ padding: 12, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer" }}
-        >
-          {loading ? "Generating..." : "Generate"}
-        </button>
-      </form>
-
-      {error && <p style={{ marginTop: 16, color: "crimson" }}>Error: {error}</p>}
-
-      {response && (
-        <pre
-          style={{
-            marginTop: 16,
-            padding: 16,
-            background: "#111",
-            color: "#0f0",
-            borderRadius: 8,
-            overflowX: "auto",
-          }}
-        >
-          {JSON.stringify(response, null, 2)}
-        </pre>
-      )}
-    </main>
-  );
-}
+    <details style={{ marginTop: 16 }}>
+      <summary style={{ cursor: "pointer" }}>Why (Trace)</summary>
+      <ul>
+        {(response.trace || []).map((x: any) => (
+          <li key={x.ruleId}>{x.ruleId}</li>
+        ))}
+      </ul>
+    </details>
+  </div>
+)}
